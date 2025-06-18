@@ -1,15 +1,21 @@
 version: '3.8'
 
 services:
-  n8n-scraper:
+  # 完整服務 (API + GUI)
+  n8n-scraper-all:
     build: .
-    container_name: n8n-scraper-app
+    container_name: n8n-scraper-all
     ports:
-      - "7860:7860"  # n8n workflow scraper
+      - "5000:5000"  # API 服務
+      - "7861:7861"  # n8n workflow scraper
       - "7862:7862"  # n8n workflow search GUI
     environment:
+      - SERVICE_MODE=all  # 啟動所有服務
+      # API 服務配置
+      - PORT=5000
+      - DEBUG=false
       # AI 服務配置 (可選)
-      - AI_PROVIDER=openai
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
@@ -23,16 +29,101 @@ services:
       # 持久化數據目錄
       - ./chroma_db:/app/chroma_db
       - ./selected_workflows:/app/selected_workflows
-      - ./workflows_all_1:/app/workflows_all_1
+      - ./workflows_data:/app/workflows_data
+      - ./workflows_AI_20250618_194041:/app/workflows_AI_20250618_194041
+    restart: always
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # 預設啟動的服務 (不需要 profile)
+
+  # 僅 API 服務
+  n8n-api:
+    build: .
+    container_name: n8n-api-only
+    ports:
+      - "5000:5000"  # API 服務
+    environment:
+      - SERVICE_MODE=api  # 僅啟動 API 服務
+      - PORT=5000
+      - DEBUG=false
+      # AI 服務配置 (可選)
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-pro}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama2}
+      - MAX_TOKENS=${MAX_TOKENS:-2000}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./selected_workflows:/app/selected_workflows
+      - ./workflows_data:/app/workflows_data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860", "||", "curl", "-f", "http://localhost:7862"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles: ["api"]
+
+  # 僅 GUI 服務
+  n8n-gui:
+    build: .
+    container_name: n8n-gui-only
+    ports:
+      - "7861:7861"  # n8n workflow scraper
+      - "7862:7862"  # n8n workflow search GUI
+    environment:
+      - SERVICE_MODE=gui  # 僅啟動 GUI 服務
+      # AI 服務配置 (可選)
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-pro}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama2}
+      - MAX_TOKENS=${MAX_TOKENS:-2000}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./selected_workflows:/app/selected_workflows
+      - ./workflows_AI_20250618_194041:/app/workflows_AI_20250618_194041
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7861", "||", "curl", "-f", "http://localhost:7862"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles: ["gui"]
+
+  # 可選：本地 Ollama 服務
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    profiles: ["ollama", "all-with-ollama"]
 
 # 為 Zeabur 部署優化的網路配置
 networks:
   default:
     driver: bridge
+
+# 持久化存儲卷
+volumes:
+  ollama_data:
+    driver: local

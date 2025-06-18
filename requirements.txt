@@ -19,3 +19,9 @@ python-dotenv>=1.0.0
 
 # LangChain HuggingFace 整合 (可選)
 langchain-huggingface>=0.0.1
+
+# Flask API 依賴
+flask>=2.3.0
+flask-restx>=1.3.0
+flask-cors>=4.0.0
+marshmallow>=3.19.0
