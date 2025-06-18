@@ -456,7 +456,20 @@ class SystemInfo(Resource):
 initialize_services()
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+    # 修復 Zeabur 環境變數解析問題
+    try:
+        port_env = os.getenv('PORT', '5000')
+        # 處理 Zeabur 的 ${WEB_PORT} 變數
+        if port_env.startswith('${') and port_env.endswith('}'):
+            # 如果是變數格式，使用預設端口
+            port = 5000
+            logger.warning(f"檢測到未解析的環境變數 {port_env}，使用預設端口 5000")
+        else:
+            port = int(port_env)
+    except (ValueError, TypeError) as e:
+        logger.warning(f"PORT 環境變數解析失敗: {e}，使用預設端口 5000")
+        port = 5000
+
     debug = os.getenv('DEBUG', 'False').lower() == 'true'
 
     logger.info(f"啟動 n8n Workflow API 服務於 port {port}")

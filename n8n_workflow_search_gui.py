@@ -488,15 +488,47 @@ class N8nWorkflowSearcherGUI:
                 continue
 
         if documents:
-            # 建立向量資料庫
-            self.vectorstore = Chroma.from_documents(
-                documents=documents,
-                embedding=self.embeddings,
-                collection_name=self.collection_name,
-                persist_directory=self.chroma_db_path
-            )
+            try:
+                # 建立向量資料庫
+                self.vectorstore = Chroma.from_documents(
+                    documents=documents,
+                    embedding=self.embeddings,
+                    collection_name=self.collection_name,
+                    persist_directory=self.chroma_db_path
+                )
+                logger.info(f"成功建立向量索引，包含 {len(documents)} 筆資料")
 
-            logger.info(f"成功建立向量索引，包含 {len(documents)} 筆資料")
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "already exists" in error_msg or "collection" in error_msg:
+                    logger.info(f"集合已存在，嘗試載入現有集合: {e}")
+                    try:
+                        # 嘗試載入現有的向量資料庫
+                        self.vectorstore = Chroma(
+                            collection_name=self.collection_name,
+                            embedding_function=self.embeddings,
+                            persist_directory=self.chroma_db_path
+                        )
+                        logger.info("成功載入現有向量資料庫")
+                    except Exception as load_error:
+                        logger.error(f"載入現有向量資料庫失敗: {load_error}")
+                        # 嘗試重置並重新建立
+                        try:
+                            logger.info("嘗試重置向量資料庫...")
+                            self.chroma_client.delete_collection(self.collection_name)
+                            self.vectorstore = Chroma.from_documents(
+                                documents=documents,
+                                embedding=self.embeddings,
+                                collection_name=self.collection_name,
+                                persist_directory=self.chroma_db_path
+                            )
+                            logger.info(f"重置後成功建立向量索引，包含 {len(documents)} 筆資料")
+                        except Exception as reset_error:
+                            logger.error(f"重置向量資料庫失敗: {reset_error}")
+                            raise
+                else:
+                    logger.error(f"建立向量資料庫時發生未知錯誤: {e}")
+                    raise
         else:
             logger.error("沒有找到有效的 workflow 檔案")
     
