@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  n8n-scraper:
+    build: .
+    container_name: n8n-scraper-app
+    ports:
+      - "7860:7860"  # n8n workflow scraper
+      - "7862:7862"  # n8n workflow search GUI
+    environment:
+      # AI 服務配置 (可選)
+      - AI_PROVIDER=openai
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-pro}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama2}
+      - MAX_TOKENS=${MAX_TOKENS:-2000}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+    volumes:
+      # 持久化數據目錄
+      - ./chroma_db:/app/chroma_db
+      - ./selected_workflows:/app/selected_workflows
+      - ./workflows_all_1:/app/workflows_all_1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860", "||", "curl", "-f", "http://localhost:7862"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# 為 Zeabur 部署優化的網路配置
+networks:
+  default:
+    driver: bridge

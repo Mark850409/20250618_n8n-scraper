@@ -1,0 +1,6 @@
+# 最小化依賴 - 僅包含運行基本功能所需的套件
+requests>=2.28.0
+gradio>=3.0.0,<4.0.0
+chromadb>=0.4.0
+numpy>=1.24.0
+python-dotenv>=1.0.0

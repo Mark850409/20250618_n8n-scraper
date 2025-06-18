@@ -1,0 +1,41 @@
+{
+  "name": "n8n-workflow-scraper",
+  "services": [
+    {
+      "name": "n8n-scraper",
+      "type": "docker",
+      "dockerfile": "Dockerfile",
+      "ports": [
+        {
+          "port": 7860,
+          "type": "http",
+          "name": "scraper"
+        },
+        {
+          "port": 7862,
+          "type": "http",
+          "name": "search"
+        }
+      ],
+      "env": {
+        "AI_PROVIDER": "openai",
+        "MAX_TOKENS": "2000",
+        "TEMPERATURE": "0.7"
+      },
+      "volumes": [
+        {
+          "name": "chroma_db",
+          "mountPath": "/app/chroma_db"
+        },
+        {
+          "name": "selected_workflows",
+          "mountPath": "/app/selected_workflows"
+        },
+        {
+          "name": "workflows_all_1",
+          "mountPath": "/app/workflows_all_1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# 核心依賴 (必須)
+requests>=2.28.0
+gradio>=4.0.0,<5.0.0
+chromadb>=0.4.0
+numpy>=1.24.0
+
+# AI 和向量搜尋依賴 (可選，但建議安裝)
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-core>=0.1.0
+sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.30.0
+
+# AI API 依賴 (可選)
+openai>=1.0.0
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+
+# LangChain HuggingFace 整合 (可選)
+langchain-huggingface>=0.0.1
